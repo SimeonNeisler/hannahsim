@@ -1,0 +1,73 @@
+
+   - Two pitches were discussed
+   - Tentatively, the ideal scenario might be to develop two papers as
+   submission to ALife cofnerence and chop the respective papers down to size
+   and repackage whatever is on the cutting board for IC2S2
+   - Srikanth and Milton are taking the lead on the data mining of ABM
+   project
+   - Rajesh proposed the spec-proto project
+   - We discussed whether spec-proto project is too big
+
+Some personal thoughts
+
+   - We develop threshold models of cooperative group formation in the
+   spirit of Granovetter.
+
+We already have it; we only need to repackage
+
+
+
+   - Based on a stochastic dynamic, actors accumulate wealth, and form
+   resource pooling \textit{proto}-institutions or groups with other agents
+   after their wealth crosses a predetermined threshold.
+
+The stochastic dynamic is part of the specnet code. This is also currently
+available
+
+
+
+
+   - For various wealth accumulation and group formation protocols,...
+
+This is where Santagio's insights and interests might overlap with the
+general direction of the team. What are the various accumulation protocols
+that one could think of?
+
+
+
+   - we study macroscopic characteristics of the resulting groups like
+   their size distribution, and robustness to controlled starvation of this
+   population.
+
+These are thing that specnet team already discussed (see github issues)
+
+
+   - Using group formation protocols where agents can coexist in multiple
+   groups lead to emergence of dynamic hypergraph based social networks.
+
+This one is new and maybe overkill for ALife, but as I discussed in the
+beginning of today's meeting, this could very well be a IC2S2 pitch, which
+can be developed independently into a CSS20 paper.
+
+
+
+Tentative teams break down
+
+*Rajesh's pitch:* Rajesh, Santiago
+*Srikanth's Pitch: *Srikanth, Milton, Santiago, Rajesh
+
+*Undecided: *Stephen, Hannah, Simeon, Jeff
+
+Are there other pitches that need to be considered? (See below for my
+thoughts on Santiago's vision)
+
+*Santiago:* Based *only* on your vision statement, I felt that neither
+ALife or IC2S2 were both too trivial for the work you are proposing. Do you
+think your ideas can fit into myopic conferences such as the ones under
+consideration?
+
+*Stephen: *Are there other ideas that you want to play with?
+
+Overall, I am in it for the fun. So even if the spec-proto does not
+materialize, I am happy to jump into any of the others being floated?
+
