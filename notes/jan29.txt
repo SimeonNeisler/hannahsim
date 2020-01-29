@@ -1,0 +1,42 @@
+
+Go through the LightGraphs tutorial
+https://github.com/JuliaGraphs/JuliaGraphsTutorials 
+
+Bookmark the API
+https://juliagraphs.github.io/LightGraphs.jl/latest/
+
+Create a mutable struct ("class") to represent an agent
+
+    "instance variables": 
+        "opinion" - an enumerated type which for now is "blue" or "red"
+        ("party?" "setting?" brainstorm)
+
+
+Research how to do basic classical OO stuff in Julia
+    - it involves mutable structs instead of classes
+    - the methods/functions are a bit weird; figure out how to do that
+
+    "methods": 
+        - get/set the opinion
+        - choose a random neighbor of yours
+
+
+Create a random undirected graph using LightGraphs (start with ER; you give it
+the number of nodes you want and the prob. of each connection actually being
+there)
+
+Make a loop in which you:
+
+    1) Ask "are we at uniformity yet?" If so, done!
+    2) Choose an agent at random.
+    3) Ask the LG graph for its neighbors.
+    4) Choose a random one of the neighbors.
+    5) Ask that random dude what its opinion is.
+    6) Copy its opinion to the guy you chose in #2.
+    7) Lather, rinse, repeat.
+
+
+Other things:
+    - Plot the graphs in an animation (and Stephen can help with this).
+    - Capture a history of the sim as it runs. (First cut: every iter of the
+      sim, record the % of reds in an array, so we can plot it at the end.)
