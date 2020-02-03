@@ -1,16 +1,11 @@
 mutable struct Agent
-    opinion::String
-    Agent(opinion) = new(opinion)
+    @enum Opinion Red Blue
+    Agent(Opinion::Opinion) = new(Opinion::Opinion)
 end
 
 function getOpinion(agent::Agent)
-    return agent.opinion
+    return agent.Opinion
 end
-function setOpinion(agent::Agent, newOpinion)
-    agent.opinion = newOpinion
+function setOpinion(agent::Agent, newOpinion::Opinion)
+    agent.Opinion = newOpinion
 end
-
-agent1 = Agent("Red")
-println(getOpinion(agent1))
-setOpinion(agent1, "Blue")
-println(getOpinion(agent1))
