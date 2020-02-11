@@ -7,7 +7,7 @@ using Glob
 using Plots
 
 include("agent.jl")
-store_dir = "/Users/hannahfrederick/Downloads"
+include("config.jl")
 
 @enum Opinion Red Blue
 function make_graph(make_anim=false)
@@ -17,7 +17,7 @@ function make_graph(make_anim=false)
 
     # Put us in a temp dir, and remove any old files from previous runs.
     save_dir = pwd()
-    cd("$(store_dir)")
+    cd("$(path)")
     rm.(glob("graph*.png"))
     rm.(glob("graph*.svg"))
 
@@ -72,11 +72,11 @@ function make_graph(make_anim=false)
                 nodestrokelw=.5,
                 nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
                     colorant"red") for a in agent_list ])
-            draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
+            draw(PNG("$(path)/graph$(lpad(string(iter),3,'0')).png"),
                 graphp)
             run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
                 "Iteration $(iter) "
-                "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
+                "$(path)/graph"$(lpad(string(iter),3,'0')).png`)
         end
 
         uniform = true
@@ -108,3 +108,5 @@ function make_graph(make_anim=false)
     # Return to user's original directory.
     cd(save_dir)
 end
+
+print(path)
