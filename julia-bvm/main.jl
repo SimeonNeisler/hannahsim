@@ -4,8 +4,10 @@ using ColorSchemes, Colors
 using Random
 using Cairo, Fontconfig
 using Glob
+using Plots
 
 include("agent.jl")
+store_dir = "/Users/hannahfrederick/Downloads"
 
 @enum Opinion Red Blue
 function make_graph(make_anim=false)
@@ -15,7 +17,7 @@ function make_graph(make_anim=false)
 
     # Put us in a temp dir, and remove any old files from previous runs.
     save_dir = pwd()
-    cd("$(tempdir())")
+    cd("$(store_dir)")
     rm.(glob("graph*.png"))
     rm.(glob("graph*.svg"))
 
@@ -38,12 +40,20 @@ function make_graph(make_anim=false)
         this_opinion = rand(opin_list)
         push!(agent_list, Agent(this_opinion))
     end
-
+    percent_red_list = []
     uniform = false
     iter = 1
     println("Iterations:")
 
     while uniform == false
+        num_red = 0
+        for a in agent_list
+            if getOpinion(a) == Red
+                num_red += 1
+            end
+        end
+        percent_red = num_red/n
+        push!(percent_red_list, percent_red)
 
         if iter % 40 > 0
             print(".")
@@ -54,7 +64,6 @@ function make_graph(make_anim=false)
         if make_anim
             # Remember and reuse graph layout for each animation frame.
             remember_layout = x -> spring_layout(x, locs_x, locs_y)
-
             # Plot this frame of animation to a file.
             graphp = gplot(graph,
                 layout=remember_layout,
@@ -63,11 +72,11 @@ function make_graph(make_anim=false)
                 nodestrokelw=.5,
                 nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
                     colorant"red") for a in agent_list ])
-            draw(PNG("$(tempdir())/graph$(lpad(string(iter),3,'0')).png"),
+            draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
                 graphp)
-            run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0 
+            run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
                 "Iteration $(iter) "
-                $(joinpath(tempdir(),"graph"))$(lpad(string(iter),3,'0')).png`)
+                "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
         end
 
         uniform = true
@@ -88,6 +97,8 @@ function make_graph(make_anim=false)
     end
 
     println(iter)
+    display(plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    savefig("per_red_plot.png")
     if make_anim
         println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
