@@ -35,12 +35,12 @@ function make_graph(make_anim=false)
 
     node_list = vertices(graph)
     agent_list = []
+    percent_red_list = []
     opin_list = (Red::Opinion, Blue::Opinion)
     for n in node_list
         this_opinion = rand(opin_list)
         push!(agent_list, Agent(this_opinion))
     end
-    percent_red_list = []
     uniform = false
     iter = 1
     println("Iterations:")
@@ -86,6 +86,7 @@ function make_graph(make_anim=false)
                 break
             end
         end
+
         this_node = rand(node_list)
         this_agent = agent_list[this_node]
         neighbor_list = neighbors(graph, this_node)
@@ -93,6 +94,41 @@ function make_graph(make_anim=false)
         next_agent = agent_list[next_node]
         next_opinion = getOpinion(next_agent)
         setOpinion(this_agent, next_opinion)
+        #=
+        if influencer == false
+            if replacement == false && length(use_node_list) == 0
+                    use_node_list = copy(node_list)
+                    use_agent_list = copy(agent_list)
+            end
+            this_node = rand(use_node_list)
+            this_agent = use_agent_list[this_node]
+            neighbor_list = neighbors(graph, this_node)
+            next_node = rand(neighbor_list)
+            next_agent = use_agent_list[next_node]
+            next_opinion = getOpinion(next_agent)
+            setOpinion(this_agent, next_opinion)
+            if replacement == false
+                filter!(x -> x ≠ this_node, use_node_list)
+                filter!(x -> x ≠ this_agent, use_agent_list)
+            end
+        else
+            if replacement == false && length(use_node_list) == 0
+                    use_node_list = copy(node_list)
+                    use_agent_list = copy(agent_list)
+            end
+            this_node = rand(use_node_list)
+            this_agent = use_agent_list[this_node]
+            neighbor_list = neighbors(graph, this_node)
+            next_node = rand(neighbor_list)
+            next_agent = use_agent_list[next_node]
+            next_opinion = getOpinion(this_agent)
+            setOpinion(next_agent, next_opinion)
+            if replacement == false
+                filter!(x -> x ≠ this_node, use_node_list)
+                filter!(x -> x ≠ this_agent, use_agent_list)
+            end
+        end
+        =#
         iter += 1
     end
 
