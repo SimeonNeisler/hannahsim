@@ -7,8 +7,7 @@ using Glob
 using Plots
 
 include("agent.jl")
-store_dir = "/Users/hannahfrederick/Downloads"
-
+include("config.jl")
 @enum Opinion Red Blue
 function make_graph(make_anim=false, influencer=false, replacement=false)
 
@@ -88,15 +87,6 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
                 break
             end
         end
-        #=
-        this_node = rand(node_list)
-        this_agent = agent_list[this_node]
-        neighbor_list = neighbors(graph, this_node)
-        next_node = rand(neighbor_list)
-        next_agent = agent_list[next_node]
-        next_opinion = getOpinion(next_agent)
-        setOpinion(this_agent, next_opinion)
-        =#
 
         if influencer == false
             if replacement == false && length(use_node_list) == 0
@@ -129,7 +119,6 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
                 filter!(x -> x ≠ this_node, use_node_list)
             end
         end
-
         iter += 1
     end
 
