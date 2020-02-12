@@ -10,7 +10,7 @@ include("agent.jl")
 store_dir = "/Users/hannahfrederick/Downloads"
 
 @enum Opinion Red Blue
-function make_graph(make_anim=false)
+function make_graph(make_anim=false, influencer=false, replacement=false)
 
     # Set seed for consistency.
     Random.seed!(12345)
@@ -33,7 +33,7 @@ function make_graph(make_anim=false)
         locs_x, locs_y = spring_layout(graph)
     end
 
-    node_list = vertices(graph)
+    node_list = Array(vertices(graph))
     agent_list = []
     percent_red_list = []
     opin_list = (Red::Opinion, Blue::Opinion)
@@ -44,6 +44,8 @@ function make_graph(make_anim=false)
     uniform = false
     iter = 1
     println("Iterations:")
+    use_node_list = copy(node_list)
+    use_agent_list = copy(agent_list)
 
     while uniform == false
         num_red = 0
@@ -86,7 +88,7 @@ function make_graph(make_anim=false)
                 break
             end
         end
-
+        #=
         this_node = rand(node_list)
         this_agent = agent_list[this_node]
         neighbor_list = neighbors(graph, this_node)
@@ -94,7 +96,8 @@ function make_graph(make_anim=false)
         next_agent = agent_list[next_node]
         next_opinion = getOpinion(next_agent)
         setOpinion(this_agent, next_opinion)
-        #=
+        =#
+
         if influencer == false
             if replacement == false && length(use_node_list) == 0
                     use_node_list = copy(node_list)
@@ -109,7 +112,6 @@ function make_graph(make_anim=false)
             setOpinion(this_agent, next_opinion)
             if replacement == false
                 filter!(x -> x ≠ this_node, use_node_list)
-                filter!(x -> x ≠ this_agent, use_agent_list)
             end
         else
             if replacement == false && length(use_node_list) == 0
@@ -125,10 +127,9 @@ function make_graph(make_anim=false)
             setOpinion(next_agent, next_opinion)
             if replacement == false
                 filter!(x -> x ≠ this_node, use_node_list)
-                filter!(x -> x ≠ this_agent, use_agent_list)
             end
         end
-        =#
+
         iter += 1
     end
 
