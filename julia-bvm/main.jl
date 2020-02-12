@@ -9,7 +9,7 @@ using Plots
 include("agent.jl")
 include("config.jl")
 @enum Opinion Red Blue
-function make_graph(make_anim=false, influencer=false, replacement=false)
+function run_sim(make_anim=false, influencer=false, replacement=false)
 
     # Set seed for consistency.
     Random.seed!(12345)
@@ -27,11 +27,6 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
         graph = erdos_renyi(n,p)
     end
 
-    # Plot initial graph layout, and remember coordinates.
-    if make_anim
-        locs_x, locs_y = spring_layout(graph)
-    end
-
     node_list = Array(vertices(graph))
     agent_list = []
     percent_red_list = []
@@ -40,6 +35,7 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
         this_opinion = rand(opin_list)
         push!(agent_list, Agent(this_opinion))
     end
+
     uniform = false
     iter = 1
     println("Iterations:")
@@ -47,12 +43,7 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
     use_agent_list = copy(agent_list)
 
     while uniform == false
-        num_red = 0
-        for a in agent_list
-            if getOpinion(a) == Red
-                num_red += 1
-            end
-        end
+        num_red = find_num_red(agent_list)
         percent_red = num_red/n
         push!(percent_red_list, percent_red)
 
@@ -63,21 +54,7 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
         end
 
         if make_anim
-            # Remember and reuse graph layout for each animation frame.
-            remember_layout = x -> spring_layout(x, locs_x, locs_y)
-            # Plot this frame of animation to a file.
-            graphp = gplot(graph,
-                layout=remember_layout,
-                NODESIZE=.08,
-                nodestrokec=colorant"grey",
-                nodestrokelw=.5,
-                nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
-                    colorant"red") for a in agent_list ])
-            draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
-                graphp)
-            run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
-                "Iteration $(iter) "
-                "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
+            make_graph_anim(graph, agent_list, iter)
         end
 
         uniform = true
@@ -93,31 +70,13 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
                     use_node_list = copy(node_list)
                     use_agent_list = copy(agent_list)
             end
-            this_node = rand(use_node_list)
-            this_agent = use_agent_list[this_node]
-            neighbor_list = neighbors(graph, this_node)
-            next_node = rand(neighbor_list)
-            next_agent = use_agent_list[next_node]
-            next_opinion = getOpinion(next_agent)
-            setOpinion(this_agent, next_opinion)
-            if replacement == false
-                filter!(x -> x ≠ this_node, use_node_list)
-            end
+            set_influencer_opinion(graph, use_node_list, use_agent_list, replacement)
         else
             if replacement == false && length(use_node_list) == 0
                     use_node_list = copy(node_list)
                     use_agent_list = copy(agent_list)
             end
-            this_node = rand(use_node_list)
-            this_agent = use_agent_list[this_node]
-            neighbor_list = neighbors(graph, this_node)
-            next_node = rand(neighbor_list)
-            next_agent = use_agent_list[next_node]
-            next_opinion = getOpinion(this_agent)
-            setOpinion(next_agent, next_opinion)
-            if replacement == false
-                filter!(x -> x ≠ this_node, use_node_list)
-            end
+            set_influencee_opinion(graph, use_node_list, use_agent_list, replacement)
         end
         iter += 1
     end
@@ -133,4 +92,69 @@ function make_graph(make_anim=false, influencer=false, replacement=false)
 
     # Return to user's original directory.
     cd(save_dir)
+end
+
+function set_influencee_opinion(this_graph, this_node_list, this_agent_list, replacement)
+    graph = this_graph
+    use_node_list = this_node_list
+    use_agent_list = this_agent_list
+    this_node = rand(use_node_list)
+    this_agent = use_agent_list[this_node]
+    neighbor_list = neighbors(graph, this_node)
+    next_node = rand(neighbor_list)
+    next_agent = use_agent_list[next_node]
+    next_opinion = getOpinion(next_agent)
+    setOpinion(this_agent, next_opinion)
+    if replacement == false
+        filter!(x -> x ≠ this_node, use_node_list)
+    end
+end
+
+function set_influencer_opinion(this_graph, this_node_list, this_agent_list, replacement)
+    graph = this_graph
+    use_node_list = this_node_list
+    use_agent_list = this_agent_list
+    this_node = rand(use_node_list)
+    this_agent = use_agent_list[this_node]
+    neighbor_list = neighbors(graph, this_node)
+    next_node = rand(neighbor_list)
+    next_agent = use_agent_list[next_node]
+    next_opinion = getOpinion(this_agent)
+    setOpinion(next_agent, next_opinion)
+    if replacement == false
+        filter!(x -> x ≠ this_node, use_node_list)
+    end
+end
+
+function find_num_red(this_agent_list)
+    agent_list = this_agent_list
+    num_red = 0
+    for a in agent_list
+        if getOpinion(a) == Red
+            num_red += 1
+        end
+    end
+    return num_red
+end
+
+function make_graph_anim(this_graph, this_agent_list, this_iter)
+    graph = this_graph
+    agent_list = this_agent_list
+    iter = this_iter
+    locs_x, locs_y = spring_layout(graph)
+    # Remember and reuse graph layout for each animation frame.
+    remember_layout = x -> spring_layout(x, locs_x, locs_y)
+    # Plot this frame of animation to a file.
+    graphp = gplot(graph,
+        layout=remember_layout,
+        NODESIZE=.08,
+        nodestrokec=colorant"grey",
+        nodestrokelw=.5,
+        nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
+            colorant"red") for a in agent_list ])
+    draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
+        graphp)
+    run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
+        "Iteration $(iter) "
+        "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
 end
