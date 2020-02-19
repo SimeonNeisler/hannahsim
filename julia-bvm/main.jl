@@ -166,6 +166,23 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     return iter
 end
 
+function average_neighbors(graph)
+    numNeighbors = 0
+    for n in vertices(graph)
+        numNeighbors += length(neighbors(n, graph))
+    return numNeighbors/length(vertices(graph))
+        
+
+end
+
+function num_isolated(graph)
+    numIsolated = 0
+    for n in graph.vertices
+        if(length(n.neighbors) == 0)
+            numIsolated+=1
+    
+end
+
 function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement=false)
     n_list = []
     p_list = []
@@ -191,3 +208,5 @@ function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement
     display(plot(p_list, avg_steps_list, title= "probability of neighbor vs average number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
     savefig("p_list_plot.png")
 end
+
+param_sweep()
