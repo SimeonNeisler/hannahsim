@@ -208,5 +208,3 @@ function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement
     display(plot(p_list, avg_steps_list, title= "probability of neighbor vs average number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
     savefig("p_list_plot.png")
 end
-
-param_sweep()
