@@ -27,7 +27,6 @@ function make_graph(n=20, p=0.2, make_anim=false, influencer=false, replacement=
     end
 
     return graph
-
 end
 
 function set_influencee_opinion(this_graph, this_node_list, this_agent_list, replacement)
@@ -186,7 +185,7 @@ end
 function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement=false)
     n_list = []
     p_list = []
-    avg_steps_list = []
+    mean_steps_list = []
     for n in 10:10:100
         for p in 0.1:0.1:1.0
             push!(n_list, n)
@@ -195,16 +194,16 @@ function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement
             for x in 1:num_runs
                 count_steps += run_sim(n, p, make_anim, influencer, replacement)
             end
-            avg_steps = count_steps/num_runs
-            push!(avg_steps_list, avg_steps)
+            mean_steps = count_steps/num_runs
+            push!(mean_steps_list, mean_steps)
 
         end
 
     end
-    df = DataFrame(N = n_list, P = p_list, STEPS = avg_steps_list)
+    df = DataFrame(N = n_list, P = p_list, STEPS = mean_steps_list)
     showall(df)
-    display(plot(n_list, avg_steps_list, title= "number of nodes vs average number of steps", xlabel="number of nodes", ylabel="number of steps"))
+    display(plot(n_list, mean_steps_list, seriestype=:scatter, title= "number of nodes vs mean number of steps", xlabel="number of nodes", ylabel="number of steps"))
     savefig("n_list_plot.png")
-    display(plot(p_list, avg_steps_list, title= "probability of neighbor vs average number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
+    display(plot(p_list, mean_steps_list, seriestype=:scatter, title= "probability of neighbor vs mean number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
     savefig("p_list_plot.png")
 end
