@@ -6,6 +6,7 @@ using Cairo, Fontconfig
 using Glob
 using Plots
 using DataFrames
+using Bootstrap
 
 include("agent.jl")
 include("config.jl")
@@ -16,7 +17,6 @@ function make_graph(n=20, p=0.2, make_anim=false, influencer=false, replacement=
     #Random.seed!(12345)
 
     # Put us in a temp dir, and remove any old files from previous runs.
-    #save_dir = pwd()
     cd("$(store_dir)")
     rm.(glob("graph*.png"))
     rm.(glob("graph*.svg"))
@@ -182,28 +182,35 @@ function num_isolated(graph)
     
 end
 
-function param_sweep(num_runs=10, make_anim=false, influencer=false, replacement=false)
+function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influencer=false, replacement=false)
     n_list = []
     p_list = []
-    mean_steps_list = []
+    n_steps_list = []
+    p_steps_list = []
+    #iterate through n, constant p
     for n in 10:10:100
-        for p in 0.1:0.1:1.0
+        for x in 1:num_runs
+            num_steps = run_sim(n, this_p, make_anim, influencer, replacement)
             push!(n_list, n)
-            push!(p_list, p)
-            count_steps = 0
-            for x in 1:num_runs
-                count_steps += run_sim(n, p, make_anim, influencer, replacement)
-            end
-            mean_steps = count_steps/num_runs
-            push!(mean_steps_list, mean_steps)
-
+            push!(n_steps_list, num_steps)
         end
-
     end
-    df = DataFrame(N = n_list, P = p_list, STEPS = mean_steps_list)
-    showall(df)
-    display(plot(n_list, mean_steps_list, seriestype=:scatter, title= "number of nodes vs mean number of steps", xlabel="number of nodes", ylabel="number of steps"))
+    #iterate through p, constant n
+    for p in 0.1:0.1:1.0
+        for x in 1:num_runs
+            num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
+            push!(p_list, p)
+            push!(p_steps_list, num_steps)
+        end
+    end
+    #generate dataframe of n and steps
+    n_data = DataFrame(N = n_list, STEPS = n_steps_list)
+    showall(n_data)
+    display(plot(n_list, n_steps_list, seriestype=:scatter, title= "number of nodes vs number of steps", xlabel="number of nodes", ylabel="number of steps"))
     savefig("n_list_plot.png")
-    display(plot(p_list, mean_steps_list, seriestype=:scatter, title= "probability of neighbor vs mean number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
+    #generate dataframe of p and steps
+    p_data = DataFrame(P = p_list, STEPS = p_steps_list)
+    showall(p_data)
+    display(plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps"))
     savefig("p_list_plot.png")
 end
