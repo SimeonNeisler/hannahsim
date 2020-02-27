@@ -7,6 +7,8 @@ using Glob
 using Plots
 using DataFrames
 using Bootstrap
+using Gadfly
+using Statistics
 
 include("agent.jl")
 include("config.jl")
@@ -169,9 +171,8 @@ function average_neighbors(graph)
     numNeighbors = 0
     for n in vertices(graph)
         numNeighbors += length(neighbors(n, graph))
+    end
     return numNeighbors/length(vertices(graph))
-        
-
 end
 
 function num_isolated(graph)
@@ -179,7 +180,8 @@ function num_isolated(graph)
     for n in graph.vertices
         if(length(n.neighbors) == 0)
             numIsolated+=1
-    
+        end
+    end
 end
 
 function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influencer=false, replacement=false)
@@ -213,4 +215,42 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     showall(p_data)
     display(plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
     savefig("p_list_plot.png")
+end
+
+function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=false, replacement=false)
+    x_vals_list = []
+    num_step_list = []
+    mean_step_list = []
+    min_step_list = []
+    max_step_list = []
+    n = this_n
+    for p in 0.1:0.1:1.0
+        for i in 1:num_runs
+            num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
+            push!(num_step_list, num_steps)
+        end
+        bs = bootstrap(mean, num_step_list, BasicSampling(length(num_step_list)))
+        c = confint(bs, BasicConfInt(0.95));[1]
+        ci = c[1]
+        m = ci[1]
+        min = ci[2]
+        max = ci[3]
+        x = n*p
+        push!(mean_step_list, m)
+        push!(min_step_list, min)
+        push!(max_step_list, max)
+        push!(x_vals_list, x)
+    end
+    df = DataFrame(mean=mean_step_list, min=min_step_list, max=max_step_list, xval=x_vals_list)
+    show(df, allrows=true, allcols=true)
+    layers = Layer[]
+    mean_layer = layer(df, x=:xval, y=:mean, Geom.line, Theme(default_color=colorant"red"))
+    min_layer = layer(df, x=:xval, y=:min, Geom.line, Theme(default_color=colorant"pink"))
+    max_layer = layer(df, x=:xval, y=:max, Geom.line, Theme(default_color=colorant"pink"))
+    fill_layer = layer(df, x=:xval, ymin=:min, ymax=:max, Geom.ribbon, Theme(default_color=colorant"yellow"))
+    append!(layers, mean_layer)
+    append!(layers, min_layer)
+    append!(layers, max_layer)
+    append!(layers, fill_layer)
+    p = plot(df, layers)
 end
