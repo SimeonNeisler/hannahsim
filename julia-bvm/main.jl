@@ -208,12 +208,12 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     #generate dataframe of n and steps
     n_data = DataFrame(N = n_list, STEPS = n_steps_list)
     showall(n_data)
-    display(plot(n_list, n_steps_list, seriestype=:scatter, title= "number of nodes vs number of steps", xlabel="number of nodes", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
+    display(Plots.plot(n_list, n_steps_list, seriestype=:scatter, title= "number of nodes vs number of steps", xlabel="number of nodes", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
     savefig("n_list_plot.png")
     #generate dataframe of p and steps
     p_data = DataFrame(P = p_list, STEPS = p_steps_list)
     showall(p_data)
-    display(plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
+    display(Plots.plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
     savefig("p_list_plot.png")
 end
 
@@ -252,5 +252,6 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     append!(layers, min_layer)
     append!(layers, max_layer)
     append!(layers, fill_layer)
-    p = plot(df, layers)
+    p = Gadfly.plot(df, layers)
+    draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
 end
