@@ -1,8 +1,9 @@
+import Cairo
 using LightGraphs
 using GraphPlot, Compose
 using ColorSchemes, Colors
 using Random
-using Cairo, Fontconfig
+#using Cairo, Fontconfig
 using Glob
 using Plots
 using DataFrames
