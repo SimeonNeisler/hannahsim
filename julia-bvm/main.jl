@@ -3,7 +3,6 @@ using LightGraphs
 using GraphPlot, Compose
 using ColorSchemes, Colors
 using Random
-#using Cairo, Fontconfig
 using Glob
 using Plots
 using DataFrames
@@ -11,19 +10,25 @@ using Bootstrap
 using Gadfly
 using Statistics
 
+#file that makes an agent struct
 include("agent.jl")
+#file that saves your store_dir, see config-example.jl as a template
 include("config.jl")
 @enum Opinion Red Blue
+
+#run_sim calls this
+#makes and returns a random erdos renyi graph with n nodes and p probability that any two nodes are neighbors
+#make_anim = if true, saves to store_dir the generated graph once it has converged to one opinion
+#influencer = if true, makes the randomly selected node change the opinion of its randomly selected neighbor
+             #if false, makes its randomly selected neighbor change the opinion of the randomly selected node
+#replacement = if true, puts back the last randomly selected node in the list of next nodes that can be selected
+              #if false, takes out the last randomly selected node from the list of next nodes that can be selected
 function make_graph(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
-
-    # Set seed for consistency.
-    #Random.seed!(12345)
-
-    # Put us in a temp dir, and remove any old files from previous runs.
+    # puts us in the dir that will save all files from this run, and remove any old files from previous runs
     cd("$(store_dir)")
     rm.(glob("graph*.png"))
     rm.(glob("graph*.svg"))
-
+    #makes sure the random erdos renyi graph is connected
     graph = erdos_renyi(n,p)
     while is_connected(graph) == false
         graph = erdos_renyi(n,p)
@@ -32,38 +37,52 @@ function make_graph(n=20, p=0.2, make_anim=false, influencer=false, replacement=
     return graph
 end
 
+#run_sim calls this if influencer = false
+#this_graph = the graph that will be used in this sim
+#this_node_list = the list of all nodes in this_graph
+#this_agent_list = the list of all agents corresponding to the nodes in this_graph
 function set_influencee_opinion(this_graph, this_node_list, this_agent_list, replacement)
     graph = this_graph
     use_node_list = this_node_list
     use_agent_list = this_agent_list
+    #picks a randomly selected node, and finds the corresponding agent
     this_node = rand(use_node_list)
     this_agent = use_agent_list[this_node]
+    #picks a randomly selected neighbor of this node, and finds the corresponding agent
     neighbor_list = neighbors(graph, this_node)
     next_node = rand(neighbor_list)
     next_agent = use_agent_list[next_node]
+    #sets the orginial node's opinion to the neighbor node's opinion
     next_opinion = getOpinion(next_agent)
     setOpinion(this_agent, next_opinion)
     if replacement == false
+        #takes the last node that was selected out of the list of next nodes to be selected
         filter!(x -> x ≠ this_node, use_node_list)
     end
 end
 
+#run_sim calls this if influencer = true
 function set_influencer_opinion(this_graph, this_node_list, this_agent_list, replacement)
     graph = this_graph
     use_node_list = this_node_list
     use_agent_list = this_agent_list
+    #picks a randomly selected node, and finds the corresponding agent
     this_node = rand(use_node_list)
     this_agent = use_agent_list[this_node]
+    #picks a randomly selected neighbor of this node, and finds the corresponding agent
     neighbor_list = neighbors(graph, this_node)
     next_node = rand(neighbor_list)
     next_agent = use_agent_list[next_node]
+    #sets the neighbor node's opinion to the orginial node's opinion
     next_opinion = getOpinion(this_agent)
     setOpinion(next_agent, next_opinion)
     if replacement == false
+        #takes the last node that was selected out of the list of next nodes to be selected
         filter!(x -> x ≠ this_node, use_node_list)
     end
 end
 
+#finds and returns the number of agents with the red opinion
 function find_num_red(this_agent_list)
     agent_list = this_agent_list
     num_red = 0
@@ -75,14 +94,15 @@ function find_num_red(this_agent_list)
     return num_red
 end
 
+#run_sim calls this if make_anim = true
 function make_graph_anim(this_graph, this_agent_list, this_iter)
     graph = this_graph
     agent_list = this_agent_list
     iter = this_iter
     locs_x, locs_y = spring_layout(graph)
-    # Remember and reuse graph layout for each animation frame.
+    # remember and reuse graph layout for each animation frame
     remember_layout = x -> spring_layout(x, locs_x, locs_y)
-    # Plot this frame of animation to a file.
+    # plot this frame of animation to a file
     graphp = gplot(graph,
         layout=remember_layout,
         NODESIZE=.08,
@@ -97,11 +117,15 @@ function make_graph_anim(this_graph, this_agent_list, this_iter)
         "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
 end
 
+#param_sweep and conf_int_sweep call this
+#runs a sim on the generated graph until it has converged to one opinion
+#returns the number of iterations until convergence in this simulation
 function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
     save_dir = pwd()
     graph = make_graph(n, p, make_anim, influencer, replacement)
     node_list = Array(vertices(graph))
     n = nv(graph)
+    #makes a list of agents with randomly assigned opinions, each agent corresponds with a node
     agent_list = []
     opin_list = (Red::Opinion, Blue::Opinion)
     for n in node_list
@@ -115,11 +139,13 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     use_node_list = copy(node_list)
     use_agent_list = copy(agent_list)
 
+    #runs the sim until the all agents have one opinion
     while uniform == false
+        #saves the percent of agents with red opinion for each iteration
         num_red = find_num_red(agent_list)
         percent_red = num_red/n
         push!(percent_red_list, percent_red)
-
+        #do you think we take this out?
         if iter % 40 > 0
             #print(".")
         else
@@ -129,7 +155,7 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
         if make_anim
             make_graph_anim(graph, agent_list, iter)
         end
-
+        #checks to see if all agents have one opinion yet, if not continue sim
         uniform = true
         for i in 1:n-1
             if getOpinion(agent_list[i]) != getOpinion(agent_list[i+1])
@@ -137,7 +163,7 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
                 break
             end
         end
-
+        #changes the opinion of an agent based on the parameters
         if influencer == false
             if replacement == false && length(use_node_list) == 0
                     use_node_list = copy(node_list)
@@ -155,19 +181,21 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     end
 
     #println(iter)
-    #display(plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
-    #savefig("per_red_plot.png")
+    #saves and shows a plot of the percent of agents with red opinion for each iteration
+    display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    savefig("per_red_plot.png")
     if make_anim
         #println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
         #println("...animation in $(tempdir())/graph.gif.")
     end
 
-    # Return to user's original directory.
+    #return to user's original directory
     cd(save_dir)
     return iter
 end
 
+#do you think we should keep this (not used for anything)?
 function average_neighbors(graph)
     numNeighbors = 0
     for n in vertices(graph)
@@ -176,6 +204,7 @@ function average_neighbors(graph)
     return numNeighbors/length(vertices(graph))
 end
 
+#do you think we should keep this (not used for anything)?
 function num_isolated(graph)
     numIsolated = 0
     for n in graph.vertices
@@ -185,6 +214,10 @@ function num_isolated(graph)
     end
 end
 
+#finds and plots the num of steps for the graph to converge for different vals of n and p
+#num_runs = the number of simulations to run for all combinations of parameters
+#this_n = val of n (in the erdos renyi graph) that will be constant as p is iterated
+#this_p = val of p (in the erdos renyi graph) that will be constant as n is iterated
 function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influencer=false, replacement=false)
     n_list = []
     p_list = []
@@ -192,6 +225,7 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     p_steps_list = []
     #iterate through n, constant p
     for n in 10:10:100
+        #save the num of steps for that val of n for each sim
         for x in 1:num_runs
             num_steps = run_sim(n, this_p, make_anim, influencer, replacement)
             push!(n_list, n)
@@ -200,24 +234,27 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     end
     #iterate through p, constant n
     for p in 0.1:0.1:1.0
+        #save the num of steps for that val of p for each sim
         for x in 1:num_runs
             num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
             push!(p_list, p)
             push!(p_steps_list, num_steps)
         end
     end
-    #generate dataframe of n and steps
+    #generate dataframe and graph the plot of vals of n and num of steps
     n_data = DataFrame(N = n_list, STEPS = n_steps_list)
     showall(n_data)
     display(Plots.plot(n_list, n_steps_list, seriestype=:scatter, title= "number of nodes vs number of steps", xlabel="number of nodes", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
     savefig("n_list_plot.png")
-    #generate dataframe of p and steps
+    #generate dataframe and graph the plot of vals of p and num of steps
     p_data = DataFrame(P = p_list, STEPS = p_steps_list)
     showall(p_data)
     display(Plots.plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
     savefig("p_list_plot.png")
 end
 
+#main - finds the num of steps for the graph to converge for different vals of lambda = n*p
+#plots the num of steps to converge with a 95% confidence interval for each val of lambda
 function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=false, replacement=false)
     x_vals_list = []
     num_step_list = []
@@ -225,26 +262,33 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     min_step_list = []
     max_step_list = []
     n = this_n
+    #iterate through p, constant n
     for p in 0.1:0.1:1.0
+        #save the num of steps for that val of x = n*p for each sim
         for i in 1:num_runs
             num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
             push!(num_step_list, num_steps)
         end
+        #finds the min, mean, and max of the confidence interval for that val of x
         bs = bootstrap(mean, num_step_list, BasicSampling(length(num_step_list)))
         c = confint(bs, BasicConfInt(0.95));[1]
         ci = c[1]
         m = ci[1]
         min = ci[2]
         max = ci[3]
+        #lambda = n*p
         x = n*p
+        #saves the x, min, mean, and max of that confidence interval to lists
         push!(mean_step_list, m)
         push!(min_step_list, min)
         push!(max_step_list, max)
         push!(x_vals_list, x)
     end
+    #generates dataframe of the min, mean, and max of the confidence interval for each val of x
     df = DataFrame(mean=mean_step_list, min=min_step_list, max=max_step_list, xval=x_vals_list)
     show(df, allrows=true, allcols=true)
     layers = Layer[]
+    #the colors of the layers aren't that bad but can we find some pretty colors?
     mean_layer = layer(df, x=:xval, y=:mean, Geom.line, Theme(default_color=colorant"red"))
     min_layer = layer(df, x=:xval, y=:min, Geom.line, Theme(default_color=colorant"pink"))
     max_layer = layer(df, x=:xval, y=:max, Geom.line, Theme(default_color=colorant"pink"))
@@ -253,6 +297,8 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     append!(layers, min_layer)
     append!(layers, max_layer)
     append!(layers, fill_layer)
-    p = Gadfly.plot(df, layers)
+    #plots the num of steps for the graph to converge for different vals of lambda with the confidence interval
+    #how can we add a legend that looks like influencer = $(influencer), replacement = $(replacement)?
+    p = Gadfly.plot(df, layers, Guide.xlabel("Value of Lambda"), Guide.ylabel("Number of Iterations"), Guide.title("Iterations until Convergence by Lambda"))
     draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
 end
