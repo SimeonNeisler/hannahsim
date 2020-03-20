@@ -1,3 +1,8 @@
+
+module bvm
+
+export make_graph, run_sim
+
 import Cairo
 using LightGraphs
 using GraphPlot, Compose
@@ -10,20 +15,20 @@ using Bootstrap
 using Gadfly
 using Statistics
 
+
 #file that makes an agent struct
 include("agent.jl")
 #file that saves your store_dir, see config-example.jl as a template
 include("config.jl")
 @enum Opinion Red Blue
 
-#run_sim calls this
-#makes and returns a random erdos renyi graph with n nodes and p probability that any two nodes are neighbors
-#make_anim = if true, saves to store_dir the generated graph once it has converged to one opinion
-#influencer = if true, makes the randomly selected node change the opinion of its randomly selected neighbor
-             #if false, makes its randomly selected neighbor change the opinion of the randomly selected node
-#replacement = if true, puts back the last randomly selected node in the list of next nodes that can be selected
-              #if false, takes out the last randomly selected node from the list of next nodes that can be selected
-function make_graph(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+"""
+    function make_graph(n=20, p=0.2)
+
+Create and return a random connected Erdos-Renyi graph with ``n`` nodes and
+probability ``p`` that any two nodes are neighbors.
+"""
+function make_graph(n=20, p=0.2)
     # puts us in the dir that will save all files from this run, and remove any old files from previous runs
     cd("$(store_dir)")
     rm.(glob("graph*.png"))
@@ -117,12 +122,28 @@ function make_graph_anim(this_graph, this_agent_list, this_iter)
         "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
 end
 
-#param_sweep and conf_int_sweep call this
-#runs a sim on the generated graph until it has converged to one opinion
-#returns the number of iterations until convergence in this simulation
+"""
+    function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+
+Run a single simulation of the Binary Voter Model on a randomly-generated
+graph. Continue until convergence (uniformity of opinion) is reached.
+
+# Arguments
+
+- `n`, `p`: Parameters to the [Erdos-Renyi random graph model](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93R%C3%A9nyi_model) (`n` = number of nodes, `p` = probability of each pair of nodes being adjacent.)
+
+- `make_anim`: if `true`, saves to `store_dir` an animated gif of the simulation.
+
+- `influencer` if `true`, makes the randomly selected node change the opinion of its randomly selected neighbor. If `false`, makes its randomly selected neighbor change the opinion of the randomly selected node
+
+- `replacement`: if `true`, puts back the last randomly selected node in the list of next nodes that can be selected. If `false`, takes out the last randomly selected node from the list of next nodes that can be selected.
+
+# Returns
+- the number of iterations until convergence in this simulation.
+"""
 function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
     save_dir = pwd()
-    graph = make_graph(n, p, make_anim, influencer, replacement)
+    graph = make_graph(n, p)
     node_list = Array(vertices(graph))
     n = nv(graph)
     #makes a list of agents with randomly assigned opinions, each agent corresponds with a node
@@ -301,4 +322,6 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     #how can we add a legend that looks like influencer = $(influencer), replacement = $(replacement)?
     p = Gadfly.plot(df, layers, Guide.xlabel("Value of Lambda"), Guide.ylabel("Number of Iterations"), Guide.title("Iterations until Convergence by Lambda"))
     draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
+end
+
 end
