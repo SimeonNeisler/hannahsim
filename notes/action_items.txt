@@ -1,0 +1,9 @@
+
+SD - Create "params" structure.
+HF - Implement the minority influence (MI) model.
+SD - Continue to document the BVM and possibly refactor.
+HF - Implement other stopping conditions:
+        - (already done: uniformity)
+        - when no more opinion changes are possible (everyone = their
+          neighbors' majority)
+        - 10,000 runs (for non-equilibrium cases)
