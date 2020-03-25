@@ -1,13 +1,14 @@
-export Opinion, Agent, getOpinion, setOpinion
+export Opinion, Agent, getOpinions, setOpinion
 @enum Opinion Red Blue
 mutable struct Agent
-    opinion::Opinion
-    Agent(opinion::Opinion) = new(opinion::Opinion)
+    opinion_array::Array{Opinion, 1}
+    Agent() = new(Array{Opinion, 1}([Red, Red]))
 end
 
-function getOpinion(agent::Agent)
-    return agent.opinion
+function getOpinions(agent::Agent)
+    return agent.opinion_array
 end
-function setOpinion(agent::Agent, newOpinion::Opinion)
-    agent.opinion = newOpinion
+
+function setOpinion(agent::Agent, newopinion::Opinion, opinion_num::Int)
+    agent.opinion_array[opinion_num] = newopinion
 end

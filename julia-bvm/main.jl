@@ -95,6 +95,18 @@ function count_opinions(agent_list, o::Opinion)
     return num_with_opinion
 end
 
+#finds and returns the number of agents with the white opinion
+function find_num_white(this_agent_list)
+    agent_list = this_agent_list
+    num_white = 0
+    for a in agent_list
+        if getOpinion(a) == White
+            num_white += 1
+        end
+    end
+    return num_white
+end
+
 #run_sim calls this if make_anim = true
 function make_graph_anim(this_graph, this_agent_list, this_iter)
     graph = this_graph
@@ -312,4 +324,90 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
 end
 
+end
+
+function new_run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+    #none of the old nodes can be selected until all of the new nodes are selected because of cognitive rebalancing
+    replacement=false
+    save_dir = pwd()
+    graph = make_graph(n, p)
+    node_list = Array(vertices(graph))
+    n = nv(graph)
+    #makes a list of agents with two randomly assigned opinions, each agent corresponds with a node
+    agent_list = []
+    opin_a_list = (Red::OpinionA, Blue::OpinionA)
+    opin_b_list = (White::OpinionB, Black::OpinionB)
+    #are either opinion in each attribute as likely to happen as the other?
+    for n in node_list
+        this_opin_a = rand(opin_a_list)
+        this_opin_b = rand(opin_b_list)
+        push!(agent_list, Agent(this_opin_a, this_opin_b))
+    end
+    uniform = false
+    iter = 1
+    #println("Iterations:")
+    percent_red_list = []
+    percent_white_list = []
+    use_node_list = copy(node_list)
+    use_agent_list = copy(agent_list)
+    #the percent of agents that are interally consistent for each iteration
+    percent_consistent_list = []
+
+    #when does the sim end - when all agents have the same opinion for both attributes?
+    while uniform == false
+        #saves the percent of agents with red opinion for each iteration
+        num_red = find_num_red(agent_list)
+        percent_red = num_red/n
+        push!(percent_red_list, percent_red)
+        num_white = find_num_white(agent_list)
+        percent_white = num_white/n
+        push!(percent_white_list, percent_white)
+        #do you think we take this out?
+        if iter % 40 > 0
+            #print(".")
+        else
+            #println(iter)
+        end
+
+        if make_anim
+            make_graph_anim(graph, agent_list, iter)
+        end
+        #checks to see if all agents have one opinion yet, if not continue sim
+        uniform = true
+        for i in 1:n-1
+            if getOpinion(agent_list[i]) != getOpinion(agent_list[i+1])
+                uniform = false
+                break
+            end
+        end
+        #changes the opinion of an agent based on the parameters
+        if influencer == false
+            if replacement == false && length(use_node_list) == 0
+                    use_node_list = copy(node_list)
+                    use_agent_list = copy(agent_list)
+            end
+            set_influencer_opinion(graph, use_node_list, use_agent_list, replacement)
+        else
+            if replacement == false && length(use_node_list) == 0
+                    use_node_list = copy(node_list)
+                    use_agent_list = copy(agent_list)
+            end
+            set_influencee_opinion(graph, use_node_list, use_agent_list, replacement)
+        end
+        iter += 1
+    end
+
+    #println(iter)
+    #saves and shows a plot of the percent of agents with red opinion for each iteration
+    display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    savefig("per_red_plot.png")
+    if make_anim
+        #println("Building animation...")
+        run(`convert -delay 15 graph*.svg graph.gif`)
+        #println("...animation in $(tempdir())/graph.gif.")
+    end
+
+    #return to user's original directory
+    cd(save_dir)
+    return iter
 end
