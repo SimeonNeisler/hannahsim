@@ -42,61 +42,57 @@ function make_graph(n=20, p=0.2)
     return graph
 end
 
-#run_sim calls this if influencer = false
-#this_graph = the graph that will be used in this sim
-#this_node_list = the list of all nodes in this_graph
-#this_agent_list = the list of all agents corresponding to the nodes in this_graph
-function set_influencee_opinion(this_graph, this_node_list, this_agent_list, replacement)
-    graph = this_graph
-    use_node_list = this_node_list
-    use_agent_list = this_agent_list
+
+"""
+    function set_opinion(graph, node_list, agent_list, random_influencer::Bool, replacement::Bool)
+
+Choose an agent at random from the environment, and change its (or one of its randomly chosen graph neighbor's) opinion to match the neighbor (or agent).    
+#
+# Arguments
+
+- `graph`, `node_list`, `agent_list`: the current state of the simulation, as embodied in the graph and agent states.
+
+- `random_influencer`: if `true`, the randomly-chosen agent will influence (change the opinion of) its randomly-chosen graph neighbor. Otherwise, the neighbor will change it.
+
+- `replacement`: if `true`, puts back the last randomly selected node in the list of next nodes that can be selected. If `false`, takes out the last randomly selected node from the list of next nodes that can be selected.
+"""
+function set_opinion(graph, node_list, agent_list, random_influencer::Bool,
+    replacement::Bool)
+
     #picks a randomly selected node, and finds the corresponding agent
-    this_node = rand(use_node_list)
-    this_agent = use_agent_list[this_node]
+    this_node = rand(node_list)
+    this_agent = agent_list[this_node]
     #picks a randomly selected neighbor of this node, and finds the corresponding agent
     neighbor_list = neighbors(graph, this_node)
     next_node = rand(neighbor_list)
-    next_agent = use_agent_list[next_node]
+    next_agent = agent_list[next_node]
     #sets the orginial node's opinion to the neighbor node's opinion
-    next_opinion = getOpinion(next_agent)
-    setOpinion(this_agent, next_opinion)
-    if replacement == false
+    if random_influencer
+        next_opinion = getOpinion(this_agent)
+        setOpinion(next_agent, next_opinion)
+    else
+        next_opinion = getOpinion(next_agent)
+        setOpinion(this_agent, next_opinion)
+    end
+    if replacement
         #takes the last node that was selected out of the list of next nodes to be selected
-        filter!(x -> x ≠ this_node, use_node_list)
+        filter!(x -> x ≠ this_node, node_list)
     end
 end
 
-#run_sim calls this if influencer = true
-function set_influencer_opinion(this_graph, this_node_list, this_agent_list, replacement)
-    graph = this_graph
-    use_node_list = this_node_list
-    use_agent_list = this_agent_list
-    #picks a randomly selected node, and finds the corresponding agent
-    this_node = rand(use_node_list)
-    this_agent = use_agent_list[this_node]
-    #picks a randomly selected neighbor of this node, and finds the corresponding agent
-    neighbor_list = neighbors(graph, this_node)
-    next_node = rand(neighbor_list)
-    next_agent = use_agent_list[next_node]
-    #sets the neighbor node's opinion to the orginial node's opinion
-    next_opinion = getOpinion(this_agent)
-    setOpinion(next_agent, next_opinion)
-    if replacement == false
-        #takes the last node that was selected out of the list of next nodes to be selected
-        filter!(x -> x ≠ this_node, use_node_list)
-    end
-end
+"""
+    function count_opinions(agent_list, o::Opinion)
 
-#finds and returns the number of agents with the red opinion
-function find_num_red(this_agent_list)
-    agent_list = this_agent_list
-    num_red = 0
+Return the number of agents who hold opinion `o`.
+"""
+function count_opinions(agent_list, o::Opinion)
+    num_with_opinion = 0
     for a in agent_list
-        if getOpinion(a) == Red
-            num_red += 1
+        if getOpinion(a) == o
+            num_with_opinion += 1
         end
     end
-    return num_red
+    return num_with_opinion
 end
 
 #run_sim calls this if make_anim = true
@@ -163,7 +159,7 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     #runs the sim until the all agents have one opinion
     while uniform == false
         #saves the percent of agents with red opinion for each iteration
-        num_red = find_num_red(agent_list)
+        num_red = count_opinions(agent_list, Red)
         percent_red = num_red/n
         push!(percent_red_list, percent_red)
         #do you think we take this out?
@@ -185,19 +181,11 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
             end
         end
         #changes the opinion of an agent based on the parameters
-        if influencer == false
-            if replacement == false && length(use_node_list) == 0
-                    use_node_list = copy(node_list)
-                    use_agent_list = copy(agent_list)
-            end
-            set_influencer_opinion(graph, use_node_list, use_agent_list, replacement)
-        else
-            if replacement == false && length(use_node_list) == 0
-                    use_node_list = copy(node_list)
-                    use_agent_list = copy(agent_list)
-            end
-            set_influencee_opinion(graph, use_node_list, use_agent_list, replacement)
+        if replacement == false && length(use_node_list) == 0
+                use_node_list = copy(node_list)
+                use_agent_list = copy(agent_list)
         end
+        set_opinion(graph, use_node_list, use_agent_list, replacement, influencer)
         iter += 1
     end
 
