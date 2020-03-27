@@ -46,7 +46,7 @@ end
 """
     function set_opinion(graph, node_list, agent_list, random_influencer::Bool, replacement::Bool)
 
-Choose an agent at random from the environment, and change its (or one of its randomly chosen graph neighbor's) opinion to match the neighbor (or agent).    
+Choose an agent at random from the environment, and change its (or one of its randomly chosen graph neighbor's) opinion to match the neighbor (or agent).
 #
 # Arguments
 
@@ -68,11 +68,11 @@ function set_opinion(graph, node_list, agent_list, random_influencer::Bool,
     next_agent = agent_list[next_node]
     #sets the orginial node's opinion to the neighbor node's opinion
     if random_influencer
-        next_opinion = getOpinion(this_agent)
-        setOpinion(next_agent, next_opinion)
+        next_opinion = getOpinions(this_agent)[1]
+        setOpinion(next_agent, next_opinion, 1)
     else
-        next_opinion = getOpinion(next_agent)
-        setOpinion(this_agent, next_opinion)
+        next_opinion = getOpinions(next_agent)[1]
+        setOpinion(this_agent, next_opinion, 1)
     end
     if replacement
         #takes the last node that was selected out of the list of next nodes to be selected
@@ -85,26 +85,14 @@ end
 
 Return the number of agents who hold opinion `o`.
 """
-function count_opinions(agent_list, o::Opinion)
+function count_opinions(agent_list, o::Opinion, x::Int)
     num_with_opinion = 0
     for a in agent_list
-        if getOpinion(a) == o
+        if getOpinions(a)[x] == o
             num_with_opinion += 1
         end
     end
     return num_with_opinion
-end
-
-#finds and returns the number of agents with the white opinion
-function find_num_white(this_agent_list)
-    agent_list = this_agent_list
-    num_white = 0
-    for a in agent_list
-        if getOpinion(a) == White
-            num_white += 1
-        end
-    end
-    return num_white
 end
 
 #run_sim calls this if make_anim = true
@@ -176,9 +164,9 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
         push!(percent_red_list, percent_red)
         #do you think we take this out?
         if iter % 40 > 0
-            #print(".")
+            print(".")
         else
-            #println(iter)
+            println(iter)
         end
 
         if make_anim
@@ -187,7 +175,7 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
         #checks to see if all agents have one opinion yet, if not continue sim
         uniform = true
         for i in 1:n-1
-            if getOpinion(agent_list[i]) != getOpinion(agent_list[i+1])
+            if getOpinions(agent_list[i]) != getOpinions(agent_list[i+1])
                 uniform = false
                 break
             end
@@ -200,15 +188,14 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
         set_opinion(graph, use_node_list, use_agent_list, replacement, influencer)
         iter += 1
     end
-
-    #println(iter)
+    println(iter)
     #saves and shows a plot of the percent of agents with red opinion for each iteration
     display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
     savefig("per_red_plot.png")
     if make_anim
-        #println("Building animation...")
+        println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
-        #println("...animation in $(tempdir())/graph.gif.")
+        println("...animation in $(tempdir())/graph.gif.")
     end
 
     #return to user's original directory
@@ -216,7 +203,6 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     return iter
 end
 
-#do you think we should keep this (not used for anything)?
 function average_neighbors(graph)
     numNeighbors = 0
     for n in vertices(graph)
@@ -225,7 +211,6 @@ function average_neighbors(graph)
     return numNeighbors/length(vertices(graph))
 end
 
-#do you think we should keep this (not used for anything)?
 function num_isolated(graph)
     numIsolated = 0
     for n in graph.vertices
@@ -324,30 +309,29 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
 end
 
-end
-
-function new_run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=false)
+    save_dir = pwd()
     #none of the old nodes can be selected until all of the new nodes are selected because of cognitive rebalancing
     replacement=false
-    save_dir = pwd()
     graph = make_graph(n, p)
     node_list = Array(vertices(graph))
     n = nv(graph)
-    #makes a list of agents with two randomly assigned opinions, each agent corresponds with a node
+    #makes a list of agents with two randomly assigned opinions - each opinion can be red or blue
     agent_list = []
-    opin_a_list = (Red::OpinionA, Blue::OpinionA)
-    opin_b_list = (White::OpinionB, Black::OpinionB)
+    opin_list = (Red::Opinion, Blue::Opinion)
     #are either opinion in each attribute as likely to happen as the other?
     for n in node_list
-        this_opin_a = rand(opin_a_list)
-        this_opin_b = rand(opin_b_list)
-        push!(agent_list, Agent(this_opin_a, this_opin_b))
+        this_agent = Agent()
+        setOpinion(this_agent, rand(opin_list), 1)
+        setOpinion(this_agent, rand(opin_list), 2)
+        push!(agent_list, this_agent)
     end
     uniform = false
     iter = 1
     #println("Iterations:")
-    percent_red_list = []
-    percent_white_list = []
+    #the percent of agents with the red opinion for attribute 1 and attribute 2
+    percent_red_list_1 = []
+    percent_red_list_2 = []
     use_node_list = copy(node_list)
     use_agent_list = copy(agent_list)
     #the percent of agents that are interally consistent for each iteration
@@ -355,59 +339,140 @@ function new_run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement
 
     #when does the sim end - when all agents have the same opinion for both attributes?
     while uniform == false
-        #saves the percent of agents with red opinion for each iteration
-        num_red = find_num_red(agent_list)
-        percent_red = num_red/n
-        push!(percent_red_list, percent_red)
-        num_white = find_num_white(agent_list)
-        percent_white = num_white/n
-        push!(percent_white_list, percent_white)
-        #do you think we take this out?
+        #saves the percent of agents with red opinion for attribute 1 and attribute 2 in each iteration
+        num_red_1 = count_opinions(agent_list, Red, 1)
+        percent_red_1 = num_red_1/n
+        push!(percent_red_list_1, percent_red_1)
+        num_red_2 = count_opinions(agent_list, Red, 2)
+        percent_red_2 = num_red_2/n
+        push!(percent_red_list_2, percent_red_2)
         if iter % 40 > 0
-            #print(".")
+            print(".")
         else
-            #println(iter)
+            println(iter)
         end
 
         if make_anim
             make_graph_anim(graph, agent_list, iter)
         end
-        #checks to see if all agents have one opinion yet, if not continue sim
+
         uniform = true
         for i in 1:n-1
-            if getOpinion(agent_list[i]) != getOpinion(agent_list[i+1])
+            #checks to see if all agents have the same set of opinions
+            if getOpinions(agent_list[i]) != getOpinions(agent_list[i+1])
                 uniform = false
                 break
+            elseif iter == 10000
+                uniform = false
+                break
+            #else - checks to see if the majority of the neighbors of each agent have the same opinions as that agent
+            else
+                num_neighbors_agree = 0
+                for x in node_list
+                    neighbor_list = neighbors(graph, x)
+                    for y in neighbor_list
+                        if getOpinions(y)[1] == getOpinions(x)[1] && getOpinions(y)[2] == getOpinions(x)[2]
+                            num_neighbors_agree += 1
+                        end
+                    end
+                    if num_neighbors_agree/length(neighbor_list) < 0.5
+                        uniform = false
+                        break
+                    end
+                end
             end
+        end
+        #each agent does cognitive rebalancing when there are no new agents left
+        if replacement == false && length(use_node_list) == 0
+            for a in agent_list
+                this_attribute = rand([1,2])
+                if this_attribute == 1
+                    other_attribute = 2
+                else
+                    other_attribute = 1
+                end
+                cognitive_rebalance(a, this_attribute, other_attribute)
+            end
+            use_node_list = copy(node_list)
+            use_agent_list = copy(agent_list)
         end
         #changes the opinion of an agent based on the parameters
-        if influencer == false
-            if replacement == false && length(use_node_list) == 0
-                    use_node_list = copy(node_list)
-                    use_agent_list = copy(agent_list)
-            end
-            set_influencer_opinion(graph, use_node_list, use_agent_list, replacement)
-        else
-            if replacement == false && length(use_node_list) == 0
-                    use_node_list = copy(node_list)
-                    use_agent_list = copy(agent_list)
-            end
-            set_influencee_opinion(graph, use_node_list, use_agent_list, replacement)
-        end
+        new_set_opinion(graph, use_node_list, use_agent_list, replacement, influencer)
         iter += 1
     end
-
-    #println(iter)
+    println(iter)
     #saves and shows a plot of the percent of agents with red opinion for each iteration
-    display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
-    savefig("per_red_plot.png")
+    #display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    #savefig("per_red_plot.png")
     if make_anim
-        #println("Building animation...")
+        println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
-        #println("...animation in $(tempdir())/graph.gif.")
+        println("...animation in $(tempdir())/graph.gif.")
     end
 
     #return to user's original directory
     cd(save_dir)
     return iter
+end
+
+function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
+    replacement::Bool)
+    #picks a randomly selected attribute
+    this_attribute = rand([1,2])
+    if this_attribute == 1
+        other_attribute = 2
+    else
+        other_attribute = 1
+    end
+    #picks a randomly selected node, and finds the corresponding agent
+    this_node = rand(node_list)
+    this_agent = agent_list[this_node]
+    #picks a randomly selected neighbor of this node, and finds the corresponding agent
+    neighbor_list = neighbors(graph, this_node)
+    next_node = rand(neighbor_list)
+    next_agent = agent_list[next_node]
+    #finds the original node's opinion of the chosen attribute
+    this_opinion = getOpinions(this_agent)[this_attribute]
+    #finds the neighbor node's opinion of the chosen attribute
+    next_opinion = getOpinions(next_agent)[this_attribute]
+    #checks if the two node's opinions of that attribute are different
+    if this_opinion != next_opinion
+        #checks if the majority of the node's neighbors has the opinion of the neighbor node
+        num_neighbors_agree = 0
+        for i in neighbor_list
+            if getOpinions(i)[this_attribute] == next_opinion
+                num_neighbors_agree += 1
+            end
+        end
+        if num_neighbors_agree/length(neighbor_list) >= 0.5
+            if random_influencer
+                setOpinion(next_agent, this_opinion, this_attribute)
+            else
+                setOpinion(this_agent, next_opinion, this_attribute)
+            end
+        else
+            #checks if the neighbor node has the same opinion for both of its attributes
+            if getOpinions(next_agent)[this_attribute] == getOpinions(next_agent)[other_attribute]
+                if random_influencer
+                    setOpinion(next_agent, this_opinion, this_attribute)
+                else
+                    setOpinion(this_agent, next_opinion, this_attribute)
+                end
+            end
+        end
+    end
+    #if a node's opinion is not changed do we still take it out of the list of next nodes?
+    if replacement
+        #takes the last node that was selected out of the list of next nodes to be selected
+        filter!(x -> x ≠ this_node, node_list)
+    end
+end
+
+function cognitive_rebalance(this_agent, this_attribute, other_attribute)
+    if getOpinions(this_agent)[this_attribute] != getOpinions(this_agent)[other_attribute]
+        next_opinion = getOpinions(this_agent)[other_attribute]
+        setOpinion(this_agent, next_opinion, this_attribute)
+    end
+end
+
 end
