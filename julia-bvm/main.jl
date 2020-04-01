@@ -322,8 +322,6 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     #are either opinion in each attribute as likely to happen as the other?
     for n in node_list
         this_agent = Agent()
-        setOpinion(this_agent, rand(opin_list), 1)
-        setOpinion(this_agent, rand(opin_list), 2)
         push!(agent_list, this_agent)
     end
     uniform = false
@@ -337,7 +335,6 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     #the percent of agents that are interally consistent for each iteration
     percent_consistent_list = []
 
-    #when does the sim end - when all agents have the same opinion for both attributes?
     while uniform == false
         #saves the percent of agents with red opinion for attribute 1 and attribute 2 in each iteration
         num_red_1 = count_opinions(agent_list, Red, 1)
@@ -356,42 +353,12 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
             make_graph_anim(graph, agent_list, iter)
         end
 
-        uniform = true
-        for i in 1:n-1
-            #checks to see if all agents have the same set of opinions
-            if getOpinions(agent_list[i]) != getOpinions(agent_list[i+1])
-                uniform = false
-                break
-            elseif iter == 10000
-                uniform = false
-                break
-            #else - checks to see if the majority of the neighbors of each agent have the same opinions as that agent
-            else
-                num_neighbors_agree = 0
-                for x in node_list
-                    neighbor_list = neighbors(graph, x)
-                    for y in neighbor_list
-                        if getOpinions(y)[1] == getOpinions(x)[1] && getOpinions(y)[2] == getOpinions(x)[2]
-                            num_neighbors_agree += 1
-                        end
-                    end
-                    if num_neighbors_agree/length(neighbor_list) < 0.5
-                        uniform = false
-                        break
-                    end
-                end
-            end
-        end
+        #checks to see if we should stop the sim
+        uniform = reached_stopping_condition()
         #each agent does cognitive rebalancing when there are no new agents left
         if replacement == false && length(use_node_list) == 0
             for a in agent_list
-                this_attribute = rand([1,2])
-                if this_attribute == 1
-                    other_attribute = 2
-                else
-                    other_attribute = 1
-                end
-                cognitive_rebalance(a, this_attribute, other_attribute)
+                cognitive_rebalance(a)
             end
             use_node_list = copy(node_list)
             use_agent_list = copy(agent_list)
@@ -417,6 +384,7 @@ end
 
 function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
     replacement::Bool)
+    replacement = false
     #picks a randomly selected attribute
     this_attribute = rand([1,2])
     if this_attribute == 1
@@ -468,11 +436,48 @@ function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
     end
 end
 
-function cognitive_rebalance(this_agent, this_attribute, other_attribute)
+function cognitive_rebalance(this_agent)
+    this_attribute = rand([1,2])
+    if this_attribute == 1
+        other_attribute = 2
+    else
+        other_attribute = 1
+    end
     if getOpinions(this_agent)[this_attribute] != getOpinions(this_agent)[other_attribute]
         next_opinion = getOpinions(this_agent)[other_attribute]
         setOpinion(this_agent, next_opinion, this_attribute)
     end
+end
+
+function reached_stopping_condition(agent_list)
+    uniform = true
+    n = length(agent_list)
+    for i in 1:n-1
+        #checks to see if all agents have the same set of opinions
+        if getOpinions(agent_list[i]) != getOpinions(agent_list[i+1])
+            uniform = false
+            break
+        elseif iter == 10000
+            uniform = false
+            break
+        #else - checks to see if the majority of the neighbors of each agent have the same opinions as that agent
+        else
+            num_neighbors_agree = 0
+            for x in node_list
+                neighbor_list = neighbors(graph, x)
+                for y in neighbor_list
+                    if getOpinions(y)[1] == getOpinions(x)[1] && getOpinions(y)[2] == getOpinions(x)[2]
+                        num_neighbors_agree += 1
+                    end
+                end
+                if num_neighbors_agree/length(neighbor_list) < 0.5
+                    uniform = false
+                    break
+                end
+            end
+        end
+    end
+    return uniform
 end
 
 end

@@ -2,7 +2,7 @@ export Opinion, Agent, getOpinions, setOpinion
 @enum Opinion Red Blue
 mutable struct Agent
     opinion_array::Array{Opinion, 1}
-    Agent() = new(Array{Opinion, 1}([Red, Red]))
+    Agent() = new(Array{Opinion, 1}([rand((Red::Opinion, Blue::Opinion)), rand((Red::Opinion, Blue::Opinion))]))
 end
 
 function getOpinions(agent::Agent)
