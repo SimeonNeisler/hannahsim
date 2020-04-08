@@ -1,7 +1,7 @@
 
 module bvm
 
-export make_graph, run_sim
+export run_sim, param_sweep, make_graph
 
 import Cairo
 using LightGraphs
@@ -47,7 +47,7 @@ end
     function set_opinion(graph, node_list, agent_list, random_influencer::Bool, replacement::Bool)
 
 Choose an agent at random from the environment, and change its (or one of its randomly chosen graph neighbor's) opinion to match the neighbor (or agent).
-#
+
 # Arguments
 
 - `graph`, `node_list`, `agent_list`: the current state of the simulation, as embodied in the graph and agent states.
@@ -80,43 +80,8 @@ function set_opinion(graph, node_list, agent_list, random_influencer::Bool,
     end
 end
 
-"""
-    function count_opinions(agent_list, o::Opinion)
 
-Return the number of agents who hold opinion `o`.
-"""
-function count_opinions(agent_list, o::Opinion, x::Int)
-    num_with_opinion = 0
-    for a in agent_list
-        if getOpinions(a)[x] == o
-            num_with_opinion += 1
-        end
-    end
-    return num_with_opinion
-end
 
-#run_sim calls this if make_anim = true
-function make_graph_anim(this_graph, this_agent_list, this_iter)
-    graph = this_graph
-    agent_list = this_agent_list
-    iter = this_iter
-    locs_x, locs_y = spring_layout(graph)
-    # remember and reuse graph layout for each animation frame
-    remember_layout = x -> spring_layout(x, locs_x, locs_y)
-    # plot this frame of animation to a file
-    graphp = gplot(graph,
-        layout=remember_layout,
-        NODESIZE=.08,
-        nodestrokec=colorant"grey",
-        nodestrokelw=.5,
-        nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
-            colorant"red") for a in agent_list ])
-    draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
-        graphp)
-    run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
-        "Iteration $(iter) "
-        "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
-end
 
 """
     function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
@@ -203,28 +168,28 @@ function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=fal
     return iter
 end
 
-function average_neighbors(graph)
-    numNeighbors = 0
-    for n in vertices(graph)
-        numNeighbors += length(neighbors(n, graph))
-    end
-    return numNeighbors/length(vertices(graph))
-end
 
-function num_isolated(graph)
-    numIsolated = 0
-    for n in graph.vertices
-        if(length(n.neighbors) == 0)
-            numIsolated+=1
-        end
-    end
-end
+"""
+    function param_sweep(num_trials=10, this_n=20, this_p=0.2, influencer=false, replacement=false)
 
-#finds and plots the num of steps for the graph to converge for different vals of n and p
-#num_runs = the number of simulations to run for all combinations of parameters
-#this_n = val of n (in the erdos renyi graph) that will be constant as p is iterated
-#this_p = val of p (in the erdos renyi graph) that will be constant as n is iterated
-function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influencer=false, replacement=false)
+Run two entire parameter sweeps of simulations, one for varying values of `n` (number of nodes in random graph) and the other for varying values of `p` (edge probability). Plot output will be created in the files `n_list_plot.png` and `p_list_plot.png` in the `store_dir` directory.
+
+# Arguments
+
+- `num_trials`: the number of trials for each fixed combination of parameters.
+
+- `make_anim`: if `true`, saves to `store_dir` an animated gif of the simulation.
+
+- `this_n`: value of `n` that will be constant as `p` is iterated.
+
+- `this_p`: value of `p` that will be constant as `n` is iterated.
+
+- `influencer`, `replacement`: passed to [`run_sim()`](@ref run_sim) (see notes there).
+
+# Returns
+- nothing
+"""
+function param_sweep(num_trials=10, this_n=20, this_p=0.2, influencer=false, replacement=false)
     n_list = []
     p_list = []
     n_steps_list = []
@@ -232,8 +197,8 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     #iterate through n, constant p
     for n in 10:10:100
         #save the num of steps for that val of n for each sim
-        for x in 1:num_runs
-            num_steps = run_sim(n, this_p, make_anim, influencer, replacement)
+        for x in 1:num_trials
+            num_steps = run_sim(n, this_p, false, influencer, replacement)
             push!(n_list, n)
             push!(n_steps_list, num_steps)
         end
@@ -241,8 +206,8 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     #iterate through p, constant n
     for p in 0.1:0.1:1.0
         #save the num of steps for that val of p for each sim
-        for x in 1:num_runs
-            num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
+        for x in 1:num_trials
+            num_steps = run_sim(this_n, p, false, influencer, replacement)
             push!(p_list, p)
             push!(p_steps_list, num_steps)
         end
@@ -251,28 +216,44 @@ function param_sweep(num_runs=10, this_n=20, this_p=0.2, make_anim=false, influe
     n_data = DataFrame(N = n_list, STEPS = n_steps_list)
     showall(n_data)
     display(Plots.plot(n_list, n_steps_list, seriestype=:scatter, title= "number of nodes vs number of steps", xlabel="number of nodes", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
-    savefig("n_list_plot.png")
+    savefig("$(store_dir)/n_list_plot.png")
     #generate dataframe and graph the plot of vals of p and num of steps
     p_data = DataFrame(P = p_list, STEPS = p_steps_list)
     showall(p_data)
     display(Plots.plot(p_list, p_steps_list, seriestype=:scatter, title= "probability of neighbor vs number of steps", xlabel="probability of neighbor", ylabel="number of steps", label="influencer = $(influencer), replacement = $(replacement)"))
-    savefig("p_list_plot.png")
+    savefig("$(store_dir)/p_list_plot.png")
 end
+
 
 #main - finds the num of steps for the graph to converge for different vals of lambda = n*p
 #plots the num of steps to converge with a 95% confidence interval for each val of lambda
-function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=false, replacement=false)
+"""
+    function conf_int_sweep(num_trials=10, n=20, influencer=false, replacement=false)
+
+Run a suite of simulations for varying values of `p` (probability of edge in random graph), and plot λ (\$=N×p\$) vs. num-iterations-to-converge with a 95% confidence band. The plot will be stored in `sweep`_n_`.png` in the `store_dir`.
+
+# Arguments
+
+- `num_trials`: the number of trials for each value of `p` (and λ).
+
+- `n`: the number of nodes in the random graph.
+
+- `influencer`, `replacement`: passed to [`run_sim()`](@ref run_sim) (see notes there).
+
+# Returns
+- nothing
+"""
+function conf_int_sweep(num_trials=10, n=20, influencer=false, replacement=false)
     x_vals_list = []
     num_step_list = []
     mean_step_list = []
     min_step_list = []
     max_step_list = []
-    n = this_n
     #iterate through p, constant n
     for p in 0.1:0.1:1.0
         #save the num of steps for that val of x = n*p for each sim
-        for i in 1:num_runs
-            num_steps = run_sim(this_n, p, make_anim, influencer, replacement)
+        for i in 1:num_trials
+            num_steps = run_sim(n, p, false, influencer, replacement)
             push!(num_step_list, num_steps)
         end
         #finds the min, mean, and max of the confidence interval for that val of x
@@ -306,8 +287,57 @@ function conf_int_sweep(num_runs=10, this_n=20, make_anim=false, influencer=fals
     #plots the num of steps for the graph to converge for different vals of lambda with the confidence interval
     #how can we add a legend that looks like influencer = $(influencer), replacement = $(replacement)?
     p = Gadfly.plot(df, layers, Guide.xlabel("Value of Lambda"), Guide.ylabel("Number of Iterations"), Guide.title("Iterations until Convergence by Lambda"))
-    draw(PNG("$(store_dir)/sweep$(this_n).png"), p)
+    draw(PNG("$(store_dir)/sweep$(n).png"), p)
 end
+
+#
+# Create one .png file for the current frame of the graph animation.
+# FIX: remember_layout no longer being rememberd?
+function draw_graph_frame(graph, agent_list, iter)
+    locs_x, locs_y = spring_layout(graph)
+    # remember and reuse graph layout for each animation frame
+    remember_layout = x -> spring_layout(x, locs_x, locs_y)
+    # plot this frame of animation to a file
+    graphp = gplot(graph,
+        layout=remember_layout,
+        NODESIZE=.08,
+        nodestrokec=colorant"grey",
+        nodestrokelw=.5,
+        nodefillc=[ ifelse(a.opinion==Blue::Opinion,colorant"blue",
+            colorant"red") for a in agent_list ])
+    draw(PNG("$(store_dir)/graph$(lpad(string(iter),3,'0')).png"),
+        graphp)
+    run(`mogrify -format svg -gravity South -pointsize 15 -annotate 0
+        "Iteration $(iter) "
+        "$(store_dir)/graph"$(lpad(string(iter),3,'0')).png`)
+end
+
+"""
+    function count_opinions(agent_list, o::Opinion, x::Int)
+
+Return the number of agents who hold opinion `o`.
+
+# Arguments
+
+- `x`: FIX ??
+
+"""
+function count_opinions(agent_list, o::Opinion, x::Int=1)
+    num_with_opinion = 0
+    for a in agent_list
+        if getOpinions(a)[x] == o
+            num_with_opinion += 1
+        end
+    end
+    return num_with_opinion
+end
+
+
+
+#############################################################################
+##################### HF's new stuff for Jinn model #########################
+#############################################################################
+
 
 function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=false)
     save_dir = pwd()
@@ -480,4 +510,5 @@ function reached_stopping_condition(agent_list)
     return uniform
 end
 
-end
+
+end # module bvm

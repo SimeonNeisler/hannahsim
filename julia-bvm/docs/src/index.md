@@ -10,7 +10,12 @@ CurrentModule = bvm
 
 ```@docs
 run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+param_sweep(num_runs=10, this_n=20, this_p=0.2, influencer=false, replacement=false)
+conf_int_sweep(num_trials=10, this_n=20, influencer=false, replacement=false)
 make_graph(n, p)
+set_opinion(graph, node_list, agent_list, random_influencer::Bool,
+    replacement::Bool)
+count_opinions(agent_list, o::Opinion, x::Int)
 ```
 
 # References
