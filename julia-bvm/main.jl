@@ -74,7 +74,7 @@ function set_opinion(graph, node_list, agent_list, random_influencer::Bool,
         next_opinion = getOpinions(next_agent)[1]
         setOpinion(this_agent, next_opinion, 1)
     end
-    if replacement
+    if replacement==false
         #takes the last node that was selected out of the list of next nodes to be selected
         filter!(x -> x ≠ this_node, node_list)
     end
@@ -383,9 +383,14 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
         end
 
         #checks to see if we should stop the sim
-        uniform = reached_stopping_condition(agent_list)
+        uniform = reached_stopping_condition(agent_list, node_list, graph, iter)
+        if uniform == true
+            #println(percent_red_list_1)
+            #println(percent_red_list_2)
+        end
         #each agent does cognitive rebalancing when there are no new agents left
         if replacement == false && length(use_node_list) == 0
+            #println("cognitive rebalance!")
             for a in agent_list
                 cognitive_rebalance(a)
             end
@@ -397,8 +402,10 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     end
     println(iter)
     #saves and shows a plot of the percent of agents with red opinion for each iteration
-    #display(Plots.plot(1:length(percent_red_list),percent_red_list, title="percent red opinion for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
-    #savefig("per_red_plot.png")
+    display(Plots.plot(1:length(percent_red_list_1),percent_red_list_1, title="percent red opinion of attribute 1 for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    savefig("per_red_1_plot.png")
+    display(Plots.plot(1:length(percent_red_list_2),percent_red_list_2, title="percent red opinion of attribute 2 for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
+    savefig("per_red_2_plot.png")
     if make_anim
         println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
@@ -436,7 +443,7 @@ function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
         #checks if the majority of the node's neighbors has the opinion of the neighbor node
         num_neighbors_agree = 0
         for i in neighbor_list
-            if getOpinions(i)[this_attribute] == next_opinion
+            if getOpinions(agent_list[i])[this_attribute] == next_opinion
                 num_neighbors_agree += 1
             end
         end
@@ -457,8 +464,8 @@ function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
             end
         end
     end
-    #if a node's opinion is not changed do we still take it out of the list of next nodes?
-    if replacement
+    #even if a node's opinion is not changed we still take it out of the list of next nodes
+    if replacement==false
         #takes the last node that was selected out of the list of next nodes to be selected
         filter!(x -> x ≠ this_node, node_list)
     end
@@ -477,7 +484,7 @@ function cognitive_rebalance(this_agent)
     end
 end
 
-function reached_stopping_condition(agent_list)
+function reached_stopping_condition(agent_list, node_list, graph, iter)
     uniform = true
     n = length(agent_list)
     for i in 1:n-1
@@ -494,7 +501,7 @@ function reached_stopping_condition(agent_list)
             for x in node_list
                 neighbor_list = neighbors(graph, x)
                 for y in neighbor_list
-                    if getOpinions(y)[1] == getOpinions(x)[1] && getOpinions(y)[2] == getOpinions(x)[2]
+                    if getOpinions(agent_list[y])[1] == getOpinions(agent_list[x])[1] && getOpinions(agent_list[y])[2] == getOpinions(agent_list[x])[2]
                         num_neighbors_agree += 1
                     end
                 end
