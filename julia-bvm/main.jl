@@ -361,7 +361,6 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     percent_red_list_1 = []
     percent_red_list_2 = []
     use_node_list = copy(node_list)
-    use_agent_list = copy(agent_list)
     #the percent of agents that are interally consistent for each iteration
     percent_consistent_list = []
 
@@ -384,17 +383,16 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
         end
 
         #checks to see if we should stop the sim
-        uniform = reached_stopping_condition()
+        uniform = reached_stopping_condition(agent_list)
         #each agent does cognitive rebalancing when there are no new agents left
         if replacement == false && length(use_node_list) == 0
             for a in agent_list
                 cognitive_rebalance(a)
             end
             use_node_list = copy(node_list)
-            use_agent_list = copy(agent_list)
         end
         #changes the opinion of an agent based on the parameters
-        new_set_opinion(graph, use_node_list, use_agent_list, replacement, influencer)
+        new_set_opinion(graph, use_node_list, agent_list, replacement, influencer)
         iter += 1
     end
     println(iter)
