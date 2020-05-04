@@ -339,7 +339,7 @@ end
 #############################################################################
 
 
-function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=false)
+function new_run_sim(;n=20, p=0.2, num_opinions=2, make_anim=false, influencer=false)
     save_dir = pwd()
     #none of the old nodes can be selected until all of the new nodes are selected because of cognitive rebalancing
     replacement=false
@@ -363,6 +363,7 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     use_node_list = copy(node_list)
     #the percent of agents that are interally consistent for each iteration
     percent_consistent_list = []
+    percent_consistent_list_acr = []
 
     while uniform == false
         #saves the percent of agents with red opinion for attribute 1 and attribute 2 in each iteration
@@ -372,6 +373,7 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
         num_red_2 = count_opinions(agent_list, Red, 2)
         percent_red_2 = num_red_2/n
         push!(percent_red_list_2, percent_red_2)
+        push!(percent_consistent_list, sum(isConsistent(a) for a in agent_list)/length(agent_list))
         if iter % 40 > 0
             print(".")
         else
@@ -396,6 +398,7 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
             end
             use_node_list = copy(node_list)
         end
+        push!(percent_consistent_list_acr, sum(isConsistent(a) for a in agent_list)/length(agent_list))
         #changes the opinion of an agent based on the parameters
         new_set_opinion(graph, use_node_list, agent_list, replacement, influencer)
         iter += 1
@@ -406,6 +409,10 @@ function new_run_sim(n=20, p=0.2, num_opinions=2, make_anim=false, influencer=fa
     savefig("per_red_1_plot.png")
     display(Plots.plot(1:length(percent_red_list_2),percent_red_list_2, title="percent red opinion of attribute 2 for each iteration", xlabel="number of iterations",ylabel="percent red opinion",seriescolor = :red))
     savefig("per_red_2_plot.png")
+    display(Plots.plot(1:length(percent_consistent_list),percent_consistent_list, title="percent consistent agents for each iterations", xlabel="number of iterations",ylabel="percent consistent",seriescolor = :black))
+    savefig("per_const_plot.png")
+    display(Plots.plot(1:length(percent_consistent_list_acr),percent_consistent_list_acr, title="percent consistent agents for each iterations (ACR)", xlabel="number of iterations",ylabel="percent consistent",seriescolor = :black))
+    savefig("per_const_plot_acr.png")
     if make_anim
         println("Building animation...")
         run(`convert -delay 15 graph*.svg graph.gif`)
@@ -464,6 +471,7 @@ function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
             end
         end
     end
+
     #even if a node's opinion is not changed we still take it out of the list of next nodes
     if replacement==false
         #takes the last node that was selected out of the list of next nodes to be selected
