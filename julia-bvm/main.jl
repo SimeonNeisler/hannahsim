@@ -102,7 +102,7 @@ graph. Continue until convergence (uniformity of opinion) is reached.
 # Returns
 - the number of iterations until convergence in this simulation.
 """
-function run_sim(n=20, p=0.2, make_anim=false, influencer=false, replacement=false)
+function run_sim(;n=20, ;p=0.2, ;make_anim=false, ;influencer=false, ;replacement=false)
     save_dir = pwd()
     graph = make_graph(n, p)
     node_list = Array(vertices(graph))
@@ -189,7 +189,7 @@ Run two entire parameter sweeps of simulations, one for varying values of `n` (n
 # Returns
 - nothing
 """
-function param_sweep(num_trials=10, this_n=20, this_p=0.2, influencer=false, replacement=false)
+function param_sweep(;num_trials=10, ;this_n=20, ;this_p=0.2, ;influencer=false, ;replacement=false)
     n_list = []
     p_list = []
     n_steps_list = []
@@ -243,7 +243,7 @@ Run a suite of simulations for varying values of `p` (probability of edge in ran
 # Returns
 - nothing
 """
-function conf_int_sweep(num_trials=10, n=20, influencer=false, replacement=false)
+function conf_int_sweep(;num_trials=10, ;n=20, ;influencer=false, ;replacement=false)
     x_vals_list = []
     num_step_list = []
     mean_step_list = []
@@ -339,7 +339,8 @@ end
 #############################################################################
 
 
-function new_run_sim(;n=20, p=0.2, num_opinions=2, make_anim=false, influencer=false)
+function new_run_sim(;n=20, ;p=0.2, ;num_opinions=2, ;make_anim=false, ;influencer=false,
+    ;cog_rebalance=true, ;indirect_minority=true, ;direct_majority=true)
     save_dir = pwd()
     #none of the old nodes can be selected until all of the new nodes are selected because of cognitive rebalancing
     replacement=false
@@ -391,7 +392,8 @@ function new_run_sim(;n=20, p=0.2, num_opinions=2, make_anim=false, influencer=f
             #println(percent_red_list_2)
         end
         #each agent does cognitive rebalancing when there are no new agents left
-        if replacement == false && length(use_node_list) == 0
+        if cog_rebalance==true && length(use_node_list) == 0
+            #cognitive rebalance
             #println("cognitive rebalance!")
             for a in agent_list
                 cognitive_rebalance(a)
@@ -400,7 +402,7 @@ function new_run_sim(;n=20, p=0.2, num_opinions=2, make_anim=false, influencer=f
         end
         push!(percent_consistent_list_acr, sum(isConsistent(a) for a in agent_list)/length(agent_list))
         #changes the opinion of an agent based on the parameters
-        new_set_opinion(graph, use_node_list, agent_list, replacement, influencer)
+        new_set_opinion(graph, use_node_list, agent_list, influencer, replacement, indirect_minority, direct majority)
         iter += 1
     end
     println(iter)
@@ -425,7 +427,7 @@ function new_run_sim(;n=20, p=0.2, num_opinions=2, make_anim=false, influencer=f
 end
 
 function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
-    replacement::Bool)
+    replacement::Bool, indirect_minority::Bool, direct_majority::Bool)
     replacement = false
     #picks a randomly selected attribute
     this_attribute = rand([1,2])
@@ -454,13 +456,15 @@ function new_set_opinion(graph, node_list, agent_list, random_influencer::Bool,
                 num_neighbors_agree += 1
             end
         end
-        if num_neighbors_agree/length(neighbor_list) >= 0.5
+        #direct majority influence
+        if direct_majority==true && num_neighbors_agree/length(neighbor_list) >= 0.5
             if random_influencer
                 setOpinion(next_agent, this_opinion, this_attribute)
             else
                 setOpinion(this_agent, next_opinion, this_attribute)
             end
-        else
+        #indirect minority influence
+        elseif indirect_minority==true
             #checks if the neighbor node has the same opinion for both of its attributes
             if getOpinions(next_agent)[this_attribute] == getOpinions(next_agent)[other_attribute]
                 if random_influencer
